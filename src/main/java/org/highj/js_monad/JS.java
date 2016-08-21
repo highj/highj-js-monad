@@ -8,7 +8,7 @@ import org.highj.data.Maybe;
 import org.highj.data.stateful.SafeIO;
 import org.highj.data.tuple.T0;
 import org.highj.function.F1;
-import org.highj.util.Mutable;
+import org.highj.function.F2;
 
 @Data(value = @Derive(inClass = "JSImpl", withVisibility = Visibility.Package), flavour = Flavour.HighJ)
 public abstract class JS<A> {
@@ -57,10 +57,26 @@ public abstract class JS<A> {
     }
 
     private static JS<JSExprId> hashCons(JSExpr expr) {
-        return liftJSI((MutableJSState s) ->
-            s.dag.lookup2(expr).map(SafeIO.applicative::pure).getOrElse(
-                (SafeIO<JSExprId>)() -> JSExprId.of(s.nextId++)
+        F1<JSExprNode,JS<JSExprId>> getOrMakeId = (JSExprNode n) -> JS.liftJSI((MutableJSState s) -> (SafeIO<JSExprId>)() -> {
+            Maybe<JSExprId> x = s.dag.lookup2(n);
+            if (x.isNothing()) {
+                return JSExprId.of(s.nextId++);
+            } else {
+                return x.get();
+            }
+        });
+        return JSExprImpl
+            .cases()
+            .LitString((String a) -> getOrMakeId.apply(JSExprNode.litString(a)))
+            .AppendString((JSExpr e1, JSExpr e2) ->
+                hashCons(e1).bind(
+                    (JSExprId x1) ->
+                        hashCons(e2).bind(
+                            (JSExprId x2) ->
+                                getOrMakeId.apply(JSExprNode.appendString(x1, x2))
+                        )
+                )
             )
-        );
+            .apply(expr);
     }
 }
