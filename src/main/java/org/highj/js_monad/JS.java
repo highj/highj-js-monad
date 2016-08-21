@@ -4,9 +4,11 @@ import org.derive4j.Data;
 import org.derive4j.Derive;
 import org.derive4j.Flavour;
 import org.derive4j.Visibility;
+import org.highj.data.Maybe;
 import org.highj.data.stateful.SafeIO;
 import org.highj.data.tuple.T0;
 import org.highj.function.F1;
+import org.highj.util.Mutable;
 
 @Data(value = @Derive(inClass = "JSImpl", withVisibility = Visibility.Package), flavour = Flavour.HighJ)
 public abstract class JS<A> {
@@ -52,5 +54,13 @@ public abstract class JS<A> {
             s.code.add(line);
             return T0.of();
         });
+    }
+
+    private static JS<JSExprId> hashCons(JSExpr expr) {
+        return liftJSI((MutableJSState s) ->
+            s.dag.lookup2(expr).map(SafeIO.applicative::pure).getOrElse(
+                (SafeIO<JSExprId>)() -> JSExprId.of(s.nextId++)
+            )
+        );
     }
 }
