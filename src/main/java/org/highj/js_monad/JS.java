@@ -4,7 +4,9 @@ import org.derive4j.Data;
 import org.derive4j.Derive;
 import org.derive4j.Flavour;
 import org.derive4j.Visibility;
+import org.highj.data.List;
 import org.highj.data.Maybe;
+import org.highj.data.stateful.Effect0;
 import org.highj.data.stateful.SafeIO;
 import org.highj.data.tuple.T0;
 import org.highj.function.F1;
@@ -18,6 +20,29 @@ public abstract class JS<A> {
     }
 
     public abstract <R> R match(Cases<R,A> cases);
+
+    public List<String> run() {
+        MutableJSState s = new MutableJSState();
+        class Util {
+            private JS<A> comp = JS.this;
+            private boolean done = false;
+
+            private <B> Effect0 processBound(Bound<B,A> bound) {
+                return () -> {
+                    comp = bound.f.apply(bound.ma.run(s).run());
+                };
+            }
+        }
+        final Util util = new Util();
+        while (!util.done) {
+            JSImpl
+                .<A>cases()
+                .Pure((Effect0)() -> util.done = true)
+                .Bind(util::processBound)
+                .apply(util.comp);
+        }
+        return List.of(s.code);
+    }
 
     public static <A> JS<A> pure(A a) {
         return JSImpl.Pure(a);
