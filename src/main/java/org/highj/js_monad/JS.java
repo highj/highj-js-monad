@@ -60,7 +60,9 @@ public abstract class JS<A> {
         F1<JSExprNode,JS<JSExprId>> getOrMakeId = (JSExprNode n) -> JS.liftJSI((MutableJSState s) -> (SafeIO<JSExprId>)() -> {
             Maybe<JSExprId> x = s.dag.lookup2(n);
             if (x.isNothing()) {
-                return JSExprId.of(s.nextId++);
+                JSExprId r = JSExprId.of(s.nextId++);
+                s.dag.put(r, n);
+                return r;
             } else {
                 return x.get();
             }
