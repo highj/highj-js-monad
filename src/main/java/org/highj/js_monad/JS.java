@@ -35,6 +35,10 @@ public abstract class JS<A> {
             .apply(this);
     }
 
+    public <B> JS<B> andThen(JS<B> a) {
+        return this.bind(unused -> a);
+    }
+
     private static <A,B,C> JS<C> bindBound(Bound<A,B> bound, F1<B,JS<C>> f) {
         return JSImpl.Bind(new Bound<>(bound.ma, (A a) -> bound.f.apply(a).bind(f)));
     }
@@ -82,18 +86,54 @@ public abstract class JS<A> {
             .apply(expr);
     }
 
+    private static JS<JSVarName> allocVarName() {
+        return liftJSI((MutableJSState s) -> (SafeIO<JSVarName>)() ->
+            JSVarName.of("v" + (s.nextVarId++))
+        );
+    }
+
     private static JS<JSVarName> evalExpr(JSExpr expr) {
         return hashCons(expr).bind((JSExprId exprId) ->
-            liftJSI((MutableJSState s) -> (SafeIO<JSVarName>)() -> {
-                JSVarName varName = s.expIdVarMap.get(exprId);
-                if (varName != null) {
-                    return varName;
-                } else {
-                    varName = JSVarName.of("v" + (s.nextVarId++));
-                    s.expIdVarMap.put(exprId, varName);
-                    return varName;
-                }
-            })
+            lookupVarForExprId(exprId).bind(
+                (Maybe<JSVarName> x) ->
+                    x.cata(
+                        JSExprImpl
+                            .cases()
+                            .Var(JS::pure)
+                            .LitString((String x2) ->
+                                allocVarName().bind(
+                                    (JSVarName n) ->
+                                        trustMe("var " + n.name() + " = \"" + x2 + "\";")
+                                            .andThen(JS.pure(n))
+                                )
+                            )
+                            .AppendString((JSExpr e1, JSExpr e2) ->
+                                evalExpr(e1).bind(
+                                    (JSVarName n1) -> evalExpr(e2).bind(
+                                        (JSVarName n2) -> allocVarName().bind(
+                                            (JSVarName n3) ->
+                                                trustMe("var " + n3.name() + " = " + n1.name() + " + " + n2.name() + ";")
+                                                    .andThen(JS.pure(n3))
+                                        )
+                                    )
+                                )
+                            )
+                            .apply(expr)
+                        ,
+                        JS::pure
+                    )
+            )
         );
+    }
+
+    private static JS<Maybe<JSVarName>> lookupVarForExprId(JSExprId exprId) {
+        return liftJSI((MutableJSState s) -> (SafeIO<Maybe<JSVarName>>)() -> {
+            JSVarName varName = s.expIdVarMap.get(exprId);
+            if (varName != null) {
+                return Maybe.Just(varName);
+            } else {
+                return Maybe.Nothing();
+            }
+        });
     }
 }
