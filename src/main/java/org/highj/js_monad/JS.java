@@ -39,7 +39,8 @@ public abstract class JS<A> {
                 .<A>cases()
                 .Pure((Effect0)() -> util.done = true)
                 .Bind(util::processBound)
-                .apply(util.comp);
+                .apply(util.comp)
+                .run();
         }
         return List.of(s.code);
     }
