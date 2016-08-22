@@ -104,6 +104,7 @@ public abstract class JS<A> {
                                 allocVarName().bind(
                                     (JSVarName n) ->
                                         trustMe("var " + n.name() + " = \"" + x2 + "\";")
+                                            .andThen(storeVarForExprId(n, exprId))
                                             .andThen(JS.pure(n))
                                 )
                             )
@@ -113,6 +114,7 @@ public abstract class JS<A> {
                                         (JSVarName n2) -> allocVarName().bind(
                                             (JSVarName n3) ->
                                                 trustMe("var " + n3.name() + " = " + n1.name() + " + " + n2.name() + ";")
+                                                    .andThen(storeVarForExprId(n3, exprId))
                                                     .andThen(JS.pure(n3))
                                         )
                                     )
@@ -134,6 +136,13 @@ public abstract class JS<A> {
             } else {
                 return Maybe.Nothing();
             }
+        });
+    }
+
+    private static JS<T0> storeVarForExprId(JSVarName varName, JSExprId exprId) {
+        return liftJSI((MutableJSState s) -> (SafeIO<T0>)() -> {
+            s.expIdVarMap.put(exprId, varName);
+            return T0.of();
         });
     }
 }
