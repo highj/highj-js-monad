@@ -9,11 +9,16 @@ import org.derive4j.Visibility;
 public abstract class JSExpr {
 
     public interface Cases<R> {
+        R Var(JSVarName varName);
         R LitString(String stringValue);
         R AppendString(JSExpr e1, JSExpr e2);
     }
 
     public abstract <R> R match(Cases<R> cases);
+
+    public static JSExpr var(JSVarName a) {
+        return JSExprImpl.Var(a);
+    }
 
     public static JSExpr litString(String a) {
         return JSExprImpl.LitString(a);

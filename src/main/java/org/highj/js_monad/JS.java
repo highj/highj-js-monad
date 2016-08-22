@@ -8,7 +8,6 @@ import org.highj.data.Maybe;
 import org.highj.data.stateful.SafeIO;
 import org.highj.data.tuple.T0;
 import org.highj.function.F1;
-import org.highj.function.F2;
 
 @Data(value = @Derive(inClass = "JSImpl", withVisibility = Visibility.Package), flavour = Flavour.HighJ)
 public abstract class JS<A> {
@@ -60,7 +59,7 @@ public abstract class JS<A> {
         F1<JSExprNode,JS<JSExprId>> getOrMakeId = (JSExprNode n) -> JS.liftJSI((MutableJSState s) -> (SafeIO<JSExprId>)() -> {
             Maybe<JSExprId> x = s.dag.lookup2(n);
             if (x.isNothing()) {
-                JSExprId r = JSExprId.of(s.nextId++);
+                JSExprId r = JSExprId.of(s.nextNodeId++);
                 s.dag.put(r, n);
                 return r;
             } else {
@@ -69,6 +68,7 @@ public abstract class JS<A> {
         });
         return JSExprImpl
             .cases()
+            .Var((JSVarName a) -> getOrMakeId.apply(JSExprNode.var(a)))
             .LitString((String a) -> getOrMakeId.apply(JSExprNode.litString(a)))
             .AppendString((JSExpr e1, JSExpr e2) ->
                 hashCons(e1).bind(
@@ -80,5 +80,20 @@ public abstract class JS<A> {
                 )
             )
             .apply(expr);
+    }
+
+    private static JS<JSVarName> evalExpr(JSExpr expr) {
+        return hashCons(expr).bind((JSExprId exprId) ->
+            liftJSI((MutableJSState s) -> (SafeIO<JSVarName>)() -> {
+                JSVarName varName = s.expIdVarMap.get(exprId);
+                if (varName != null) {
+                    return varName;
+                } else {
+                    varName = JSVarName.of("v" + (s.nextVarId++));
+                    s.expIdVarMap.put(exprId, varName);
+                    return varName;
+                }
+            })
+        );
     }
 }
