@@ -6,7 +6,7 @@ JavaScript Monad built on-top of HighJ infrastructure
 ### Pure FFI
 ```
 public JSNumber sin(JSNumber x) {
-  return JSNumber.of(JSExpr.callPure(JSExpr.var(JSVarName.of("Math.sin")), x.expr()));
+  return JSNumber.of(JSExpr.callPure(JSExpr.var(JSVarName.of("Math.sin")), List.of(x.expr())));
 }
 ```
 
