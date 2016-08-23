@@ -4,15 +4,20 @@ import org.derive4j.Data;
 import org.derive4j.Derive;
 import org.derive4j.Flavour;
 import org.derive4j.Visibility;
+import org.derive4j.hkt.__;
 import org.highj.data.List;
 import org.highj.data.Maybe;
 import org.highj.data.stateful.Effect0;
 import org.highj.data.stateful.SafeIO;
 import org.highj.data.tuple.T0;
 import org.highj.function.F1;
+import org.highj.js_monad.js.JSMonad;
+import org.highj.typeclass1.monad.Monad;
 
 @Data(value = @Derive(inClass = "JSImpl", withVisibility = Visibility.Package), flavour = Flavour.HighJ)
-public abstract class JS<A> {
+public abstract class JS<A> implements __<JS.µ,A> {
+
+    public enum µ {}
 
     public interface Cases<R,A> {
         R Pure(A pure);
@@ -20,6 +25,10 @@ public abstract class JS<A> {
     }
 
     public abstract <R> R match(Cases<R,A> cases);
+
+    public static <A> JS<A> narrow(__<JS.µ,A> a) {
+        return (JS<A>)a;
+    }
 
     public List<String> run() {
         MutableJSState s = new MutableJSState();
@@ -109,6 +118,15 @@ public abstract class JS<A> {
                         )
                 )
             )
+            .CallPure((JSExpr func, List<JSExpr> args) ->
+                hashCons(func).bind(
+                    (JSExprId funcId) ->
+                        JS.narrow(monad.sequence(args.map(JS::hashCons))).bind(
+                            (List<JSExprId> argsId) ->
+                                getOrMakeId.apply(JSExprNode.callPure(funcId, argsId))
+                        )
+                )
+            )
             .apply(expr);
     }
 
@@ -146,8 +164,22 @@ public abstract class JS<A> {
                                     )
                                 )
                             )
-                            .apply(expr)
-                        ,
+                            .CallPure((JSExpr func, List<JSExpr> args) ->
+                                evalExpr(func).bind(
+                                    (JSVarName nFunc) ->
+                                        JS.narrow(monad.sequence(args.map(JS::evalExpr))).bind(
+                                            (List<JSVarName> nArgs) -> allocVarName().bind(
+                                                (JSVarName n) ->
+                                                    trustMe("var " + n.name() + " = " + nFunc.name() + "(" +
+                                                        nArgs.map(JSVarName::name).intersperse(",") +
+                                                        ");"
+                                                    )
+                                                    .andThen(JS.pure(n))
+                                            )
+                                        )
+                                )
+                            )
+                            .apply(expr),
                         JS::pure
                     )
             )
@@ -171,4 +203,6 @@ public abstract class JS<A> {
             return T0.of();
         });
     }
+
+    public static final Monad<µ> monad = new JSMonad() {};
 }
