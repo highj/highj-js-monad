@@ -112,13 +112,13 @@ public abstract class JS<A> {
             .apply(expr);
     }
 
-    private static JS<JSVarName> allocVarName() {
+    public static JS<JSVarName> allocVarName() {
         return liftJSI((MutableJSState s) -> (SafeIO<JSVarName>)() ->
             JSVarName.of("v" + (s.nextVarId++))
         );
     }
 
-    private static JS<JSVarName> evalExpr(JSExpr expr) {
+    public static JS<JSVarName> evalExpr(JSExpr expr) {
         return hashCons(expr).bind((JSExprId exprId) ->
             lookupVarForExprId(exprId).bind(
                 (Maybe<JSVarName> x) ->
