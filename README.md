@@ -24,3 +24,12 @@ public JS<JSString> prompt(JSString msg) {
     );
 }
 ```
+
+## Code Example
+This one is from the Reference Implementation (in PureScript). It will look a little different in Java.
+```
+example :: JS Unit
+example = do
+  userName <- prompt $ jsStr "What is your name?"
+  alert $ (jsStr "Hello ") <> userName <> (jsStr "!")
+```
