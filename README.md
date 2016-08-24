@@ -25,6 +25,19 @@ public JS<JSString> prompt(JSString msg) {
 }
 ```
 
+Another Example
+```
+public JS<JSJQuery> $(JSSelector selector) {
+  return JS.narrow(JS.monad.join(JS.monad.apply2(
+    (JSVarName nSelector) -> (JSVarName nResult) ->
+      JS.trustMe("var " + nResult.name() + " = $(" + nSelector.name() + ");")
+        .andThen(JS.pure(JSJQuery.of(JSExpr.var(nResult)))),
+      JS.evalExpr(selector.expr()),
+      JS.allocVarName()
+  )));
+}
+```
+
 ## Usage Example
 This one is from the Reference Implementation (in PureScript). It will look a little different in Java.
 ```
