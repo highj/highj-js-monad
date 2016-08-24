@@ -25,7 +25,7 @@ public JS<JSString> prompt(JSString msg) {
 }
 ```
 
-## Code Example
+## Usage Example
 This one is from the Reference Implementation (in PureScript). It will look a little different in Java.
 ```
 example :: JS Unit
